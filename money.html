@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雙人線上存錢筒 (Firebase V8 + 整數版本)</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <style>
+    body {
+      font-family: "Noto Sans TC", sans-serif;
+      background: #f8fff8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 700px;
+      padding: 25px;
+    }
+    h1 {
+      text-align: center;
+      color: #2a7d5f;
+      margin-bottom: 25px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .person {
+      flex: 1;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    }
+    .person h2 {
+      margin: 0;
+      color: #2a7d5f;
+    }
+    .money {
+      font-size: 1.8em;
+      margin: 10px 0;
+      color: #333;
+    }
+    input {
+      width: 80%;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 6px;
+      font-size: 1em;
+    }
+    button {
+      display: inline-block;
+      margin: 4px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95em;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .deposit { background: #4caf50; }
+    .withdraw { background: #f44336; }
+    button:hover { opacity: 0.85; }
+    .total {
+      text-align: center;
+      margin-top: 25px;
+      font-size: 1.4em;
+      color: #2a7d5f;
+      font-weight: bold;
+      border-top: 1px dashed #ccc;
+      padding-top: 15px;
+    }
+    .coin {
+      margin-top: 30px;
+      padding: 15px;
+      background: #f0fff4;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    }
+    .coin h2 {
+      color: #388e3c;
+      margin: 0 0 10px 0;
+    }
+    .history {
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    /* 主要頁面歷史紀錄 */
+    .record {
+      font-size: 0.9em;
+      margin: 4px 0;
+      border-radius: 6px;
+      padding: 6px;
+      color: #333; /* 確保非金額部分文字清晰 */
+    }
+    /* ⭐ 新增 CSS 類別來控制顏色 ⭐ */
+    .deposit-text { 
+        color: #2a7d5f !important; /* 深綠色，確保可讀性 */
+        font-weight: bold;
+    } 
+    .withdraw-text { 
+        color: #f44336 !important; /* 紅色 */
+        font-weight: bold;
+    }
+    /* MODAL 樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .modal-close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover,
+    .modal-close:focus {
+      color: #333;
+      text-decoration: none;
+    }
+    .modal-title {
+        color: #2a7d5f;
+        margin-top: 0;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+    }
+    /* 彈窗歷史紀錄 */
+    .record-full {
+      margin-bottom: 8px; 
+      padding: 10px 0;
+      border-radius: 6px; 
+      font-size: 0.9em;
+      line-height: 1.5;
+      color: #333;
+      border-bottom: 1px dotted #eee;
+    }
+    .record-full:last-child {
+        border-bottom: none;
+    }
+    /* 彈窗內使用同樣的 CSS Class 確保一致性 */
+    .record-full .deposit-text { color: #2a7d5f; font-weight: bold;}
+    .record-full .withdraw-text { color: #f44336; font-weight: bold;}
+    .record-full small { color: #777; display: block; margin-top: 2px; font-size: 0.85em;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>存錢筒</h1>
+
+    <div class="row">
+      <div class="person" id="personA">
+        <h2>阿帥</h2>
+        <div class="money">$<span id="moneyA">0</span></div>
+        <input type="number" id="inputA" placeholder="整數金額">
+        <br>
+        <button class="deposit" onclick="updateMoney('A','deposit')">存入</button>
+        <button class="withdraw" onclick="updateMoney('A','withdraw')">提領</button>
+      </div>
+
+      <div class="person" id="personB">
+        <h2>阿美</h2>
+        <div class="money">$<span id="moneyB">0</span></div>
+        <input type="number" id="inputB" placeholder="整數金額">
+        <br>
+        <button class="deposit" onclick="updateMoney('B','deposit')">存入</button>
+        <button class="withdraw" onclick="updateMoney('B','withdraw')">提領</button>
+      </div>
+    </div>
+
+    <div class="coin">
+      <h2>🪙 零錢筒</h2>
+      <div class="money">$<span id="moneyCoin">0</span></div>
+      <input type="number" id="inputCoin" placeholder="整數金額">
+      <br>
+      <button class="deposit" onclick="updateMoney('Coin','deposit')">存入</button>
+      <button class="withdraw" onclick="updateMoney('Coin','withdraw')">提領</button>
+    </div>
+
+    <div class="total">💰總金額：$<span id="total">0</span></div>
+
+    <div style="text-align: center; margin-top: 15px;">
+        <button onclick="showAllHistory()" style="background: #3498db; border-radius: 8px; padding: 10px 15px; border: none; color: white; cursor: pointer;">
+            📑 查看所有歷史紀錄
+        </button>
+    </div>
+    
+    <div class="history" id="history"></div>
+  </div>
+
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal()">&times;</span>
+    <h2 class="modal-title">所有歷史交易紀錄</h2>
+    <div id="modalHistoryContent" style="max-height: 400px; overflow-y: auto;">
+      正在載入...
+    </div>
+  </div>
+</div>
+
+<script>
+  // ⭐ 您的 Firebase 配置 (保持不變) ⭐
+  const firebaseConfig = {
+    apiKey: "AIzaSyDADKrFkmuLTYfpH9PGd2xY6j_UJT0CVFg",
+    authDomain: "moneyyy-bea87.firebaseapp.com",
+    projectId: "moneyyy-bea87",
+    storageBucket: "moneyyy-bea87.firebasestorage.app",
+    messagingSenderId: "993162981365",
+    appId: "1:993162981365:web:706344878dce215523fabc",
+    measurementId: "G-TK1JTGWDZR"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let moneyA = 0;
+  let moneyB = 0;
+  let moneyCoin = 0;
+  let transactions = [];
+
+  function updateDisplay() {
+      document.getElementById('moneyA').textContent = moneyA;
+      document.getElementById('moneyB').textContent = moneyB;
+      document.getElementById('moneyCoin').textContent = moneyCoin;
+      
+      const total = moneyA + moneyB; 
+      document.getElementById('total').textContent = total;
+  }
+
+  async function saveBalance(name, balance) {
+    try {
+        await db.collection("wallets").doc(name).set({ balance });
+        return true; 
+    } catch (error) {
+        console.error("Firebase 儲存餘額失敗:", error);
+        alert(`資料儲存失敗 (${name})，請檢查 Firebase 連線或安全規則。`);
+        return false; 
+    }
+  }
+
+  async function updateMoney(person, action) {
+    const input = document.getElementById(`input${person}`);
+    
+    let amount = parseInt(input.value);
+    
+    if (isNaN(amount) || amount <= 0) {
+      alert("請輸入有效的整數金額");
+      input.value = ''; 
+      return;
+    }
+    
+    let who, alertName, originalBalance, newBalance;
+    
+    if (person === 'A') {
+        who = "阿帥"; alertName = "阿帥"; originalBalance = moneyA;
+    } else if (person === 'B') {
+        who = "阿美"; alertName = "阿美"; originalBalance = moneyB;
+    } else { 
+        who = "零錢"; alertName = "零錢"; originalBalance = moneyCoin;
+    }
+
+    let type = action === 'deposit' ? "存入" : "提領";
+    let color = action === 'deposit' ? "green" : "red";
+    let success = false;
+    newBalance = originalBalance;
+
+
+    if (action === 'deposit') {
+        newBalance += amount;
+        success = true;
+    } else { 
+        if (originalBalance >= amount) {
+            newBalance -= amount;
+            success = true;
+        } else {
+            alert(`${alertName} 金額不足 (現有 $${originalBalance})`);
+        }
+    }
+
+    input.value = ''; 
+
+    if (success) {
+        if (person === 'A') moneyA = newBalance;
+        else if (person === 'B') moneyB = newBalance;
+        else moneyCoin = newBalance;
+        
+        const saveSuccess = await saveBalance(who, newBalance);
+        
+        if (saveSuccess) {
+            try {
+                await db.collection("transactions").add({
+                    who, type, amount: amount, color,
+                    time: firebase.firestore.Timestamp.now() 
+                });
+
+                updateDisplay(); 
+                
+                const time = new Date().toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const record = { who, type, amount: amount, color, time };
+                transactions.unshift(record);
+                updateHistory();
+
+            } catch (error) {
+                 console.error("Firebase 寫入交易紀錄失敗:", error);
+                 alert("交易紀錄儲存失敗，請檢查 Firebase 連線或安全規則。");
+                 
+                 if (person === 'A') moneyA = originalBalance;
+                 else if (person === 'B') moneyB = originalBalance;
+                 else moneyCoin = originalBalance;
+                 updateDisplay();
+            }
+
+        } else {
+            if (person === 'A') moneyA = originalBalance;
+            else if (person === 'B') moneyB = originalBalance;
+            else moneyCoin = originalBalance;
+            updateDisplay();
+        }
+    }
+  }
+
+  // --- 歷史紀錄邏輯 (使用 CSS Class 確保顏色生效) ---
+  function updateHistory() {
+    const list = transactions.map(t => {
+      // ⭐ 修改：根據 color 變數判斷使用新的 CSS Class ⭐
+      const colorClass = t.color === 'green' ? 'deposit-text' : 'withdraw-text'; 
+      return `
+        <div class="record">
+          <span class="${colorClass}">${t.who} ${t.type} $${t.amount}</span> <br>
+          <small>${t.time}</small>
+        </div>
+      `;
+    }).join('');
+    document.getElementById('history').innerHTML = list;
+  }
+
+  function closeModal() {
+      document.getElementById('historyModal').style.display = 'none';
+  }
+
+  function showAllHistory() {
+      const modal = document.getElementById('historyModal');
+      const content = document.getElementById('modalHistoryContent');
+      
+      modal.style.display = 'block';
+      content.innerHTML = '正在載入所有歷史紀錄...';
+
+      db.collection("transactions").orderBy("time", "desc").get()
+          .then(snapshot => {
+              let allRecordsHtml = '';
+              
+              if (snapshot.empty) {
+                  allRecordsHtml += '<p>目前沒有任何歷史紀錄。</p>';
+              } else {
+                  snapshot.forEach(doc => {
+                      const data = doc.data();
+                      const formattedTime = data.time.toDate().toLocaleString('zh-TW', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      
+                      const colorClass = data.type === '存入' ? 'deposit-text' : 'withdraw-text';
+                      
+                      allRecordsHtml += `
+                          <div class="record-full">
+                              <span class="${colorClass}">${data.who} ${data.type} $${parseInt(data.amount)}</span>
+                              <small>時間: ${formattedTime}</small>
+                          </div>
+                      `;
+                  });
+              }
+
+              content.innerHTML = allRecordsHtml;
+
+          })
+          .catch(error => {
+              console.error("載入所有歷史紀錄失敗:", error);
+              content.innerHTML = `<p style="color:red;">載入失敗：無法從 Firebase 載入紀錄，請檢查控制台。</p>`;
+          });
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('historyModal');
+    if (event.target == modal) {
+      closeModal();
+    }
+  }
+
+  function loadWallets() {
+    const people = ['阿帥', '阿美', '零錢']; 
+    let loadedCount = 0;
+    const totalCount = people.length;
+
+    people.forEach(name => {
+      db.collection("wallets").doc(name).get().then(doc => {
+        if (doc.exists) {
+          const balance = parseInt(doc.data().balance) || 0; 
+          if (name === '阿帥') moneyA = balance;
+          else if (name === '阿美') moneyB = balance;
+          else if (name === '零錢') moneyCoin = balance;
+        }
+        loadedCount++;
+        if (loadedCount === totalCount) {
+             updateDisplay(); 
+        }
+      });
+    }).catch(error => {
+        console.error("載入錢包資料失敗:", error);
+        alert("初始餘額載入失敗，請檢查 Firebase 連線或安全規則。");
+    });
+  }
+
+  function loadHistory() {
+    db.collection("transactions").orderBy("time", "desc").limit(50).get().then(snapshot => {
+      transactions = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const formattedTime = data.time.toDate().toLocaleString('zh-TW', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        transactions.push({
+          who: data.who,
+          type: data.type,
+          amount: parseInt(data.amount),
+          color: data.color,
+          time: formattedTime
+        });
+      });
+      updateHistory();
+    }).catch(error => {
+        console.error("載入歷史紀錄失敗:", error);
+    });
+  }
+
+  window.onload = function() {
+    loadWallets();
+    loadHistory();
+  };
+</script>
+</body>
+</html>
