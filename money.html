@@ -195,7 +195,7 @@
       </div>
 
       <div class="person" id="personB">
-        <h2>阿美</h2>
+        <h2>伊🍊寶</h2>
         <div class="money">$<span id="moneyB">0</span></div>
         <input type="number" id="inputB" placeholder="整數金額">
         <br>
@@ -290,7 +290,7 @@
     if (person === 'A') {
         who = "阿帥"; alertName = "阿帥"; originalBalance = moneyA;
     } else if (person === 'B') {
-        who = "阿美"; alertName = "阿美"; originalBalance = moneyB;
+        who = "伊🍊寶"; alertName = "伊🍊寶"; originalBalance = moneyB;
     } else { 
         who = "零錢"; alertName = "零錢"; originalBalance = moneyCoin;
     }
@@ -420,7 +420,7 @@
   }
 
   function loadWallets() {
-    const people = ['阿帥', '阿美', '零錢']; 
+    const people = ['阿帥', '伊🍊寶', '零錢']; 
     let loadedCount = 0;
     const totalCount = people.length;
 
@@ -429,7 +429,7 @@
         if (doc.exists) {
           const balance = parseInt(doc.data().balance) || 0; 
           if (name === '阿帥') moneyA = balance;
-          else if (name === '阿美') moneyB = balance;
+          else if (name === '伊🍊寶') moneyB = balance;
           else if (name === '零錢') moneyCoin = balance;
         }
         loadedCount++;
