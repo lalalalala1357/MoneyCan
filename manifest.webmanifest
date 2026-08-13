@@ -1,0 +1,13 @@
+{
+  "name": "MoneyCan 家庭記帳與存錢筒",
+  "short_name": "MoneyCan",
+  "description": "適合情侶與家庭共同使用的記帳與存錢筒。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f6f9",
+  "theme_color": "#17233c",
+  "categories": ["finance", "productivity", "lifestyle"]
+}

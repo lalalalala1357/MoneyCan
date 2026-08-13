@@ -2,261 +2,124 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0f766e">
-  <title>家庭存錢簿</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <style>
-    :root{--primary:#0f766e;--primary-dark:#115e59;--green:#15803d;--red:#dc2626;--ink:#17202a;--muted:#64748b;--line:#dbe4e8;--surface:#fff;--bg:#edf7f4}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:linear-gradient(145deg,#e6f6f1,#f7faf9);padding:32px 16px}
-    button,input{font:inherit}
-    .app{width:min(920px,100%);margin:auto}
-    header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:22px}
-    h1{margin:0;color:var(--primary-dark);font-size:clamp(1.8rem,5vw,2.5rem)}
-    .subtitle{margin:6px 0 0;color:var(--muted)}
-    .status{font-size:.85rem;color:var(--muted);white-space:nowrap}
-    .status::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px}
-    .status.online::before{background:#22c55e}.status.error::before{background:#ef4444}
-    .mode-banner{display:flex;align-items:flex-start;gap:12px;border-radius:14px;padding:13px 16px;margin-bottom:18px;border:1px solid}.mode-icon{font-size:1.25rem;line-height:1.2}.mode-banner strong{display:block;margin-bottom:2px}.mode-banner p{margin:0;font-size:.88rem;line-height:1.45}.mode-banner.cloud{background:#ecfdf5;border-color:#a7f3d0;color:#166534}.mode-banner.local{background:#fffbeb;border-color:#fde68a;color:#92400e}.mode-banner.error{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-    .summary{background:linear-gradient(135deg,var(--primary),#0d9488);color:#fff;border-radius:22px;padding:24px;box-shadow:0 18px 45px rgba(15,118,110,.2);margin-bottom:20px}
-    .summary small{opacity:.82}.summary strong{display:block;font-size:clamp(2rem,7vw,3.2rem);margin-top:5px;letter-spacing:-.03em}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    .wallet{background:var(--surface);border:1px solid rgba(219,228,232,.9);border-radius:18px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
-    .wallet h2{font-size:1.05rem;margin:0;color:var(--muted)}
-    .balance{font-size:1.8rem;font-weight:800;margin:8px 0 18px;color:var(--primary-dark);word-break:break-all}
-    .amount{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;background:#fbfdfd}
-    .note,.category{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none;background:#fbfdfd;margin-top:8px;font-size:.9rem}
-    .amount:focus{border-color:#14b8a6;box-shadow:0 0 0 3px rgba(20,184,166,.14)}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-    .quick-amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}.quick-amount{background:#f1f5f9;color:#0f766e;padding:7px 3px;font-size:.82rem;border:1px solid #dbe4e8}.quick-amount:hover{background:#ccfbf1}
-    button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;transition:transform .15s,opacity .15s}
-    button:hover{transform:translateY(-1px)}button:disabled{cursor:wait;opacity:.55;transform:none}
-    .deposit{background:#dcfce7;color:var(--green)}.withdraw{background:#fee2e2;color:var(--red)}
-    .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:20px}
-    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
-    .panel h2{margin:0;font-size:1.15rem}.link-btn{background:transparent;color:var(--primary);padding:6px}
-    .panel-tools{display:flex;align-items:center;gap:8px}.undo-btn{background:#fff7ed;color:#c2410c;padding:7px 10px}.undo-btn:disabled{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{background:#f8fafc;border-radius:13px;padding:15px}.stat small{color:var(--muted)}.stat strong{display:block;font-size:1.35rem;margin-top:5px}.positive{color:var(--green)}.negative{color:var(--red)}.stats-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.stats-controls select,.stats-controls input,.goal-form select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff}.custom-dates{display:flex;gap:8px}.custom-dates[hidden]{display:none}
-    .bars{display:grid;gap:10px;margin-top:16px}.bar-row{display:grid;grid-template-columns:80px 1fr 90px;align-items:center;gap:10px;font-size:.88rem}.bar-track,.goal-track{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}.bar-fill,.goal-fill{height:100%;background:linear-gradient(90deg,#14b8a6,#0f766e);border-radius:inherit;transition:width .3s}
-    .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}.filters input,.filters select,.goal-form input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff}
-    .goal-form{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto auto;gap:8px}.goal-save{background:var(--primary);color:#fff}.goal-cancel{background:#e2e8f0;color:#475569}.goals-list{display:grid;gap:13px;margin-top:16px}.goal-card{border:1px solid var(--line);border-radius:13px;padding:14px}.goal-info{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px}.goal-message{color:var(--muted);font-size:.88rem;margin-top:8px}.goal-actions{display:flex;justify-content:flex-end;gap:5px;margin-top:8px}.goal-edit,.goal-delete{background:transparent;padding:4px 7px}.goal-edit{color:var(--primary)}.goal-delete{color:var(--red)}
-    .transaction-edit{background:transparent;color:#2563eb;padding:2px 5px;font-size:.8rem}.collapse-btn{margin-left:auto;background:#f1f5f9;color:#475569;padding:5px 9px}.panel-body{overflow:hidden}.panel.collapsed .panel-body{display:none}.panel.collapsed{padding-bottom:12px}
-    .pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:13px}.pagination button{background:#e2e8f0;color:#334155;padding:7px 11px}.pagination span{font-size:.88rem;color:var(--muted)}
-    .history{display:grid;gap:8px;max-height:300px;overflow:auto}
-    .record{display:flex;justify-content:space-between;gap:12px;padding:11px 4px;border-bottom:1px solid #eef2f3}
-    .record:last-child{border-bottom:0}.record-main{font-weight:700}.deposit-text{color:var(--green)}.withdraw-text{color:var(--red)}
-    .record time{color:var(--muted);font-size:.82rem;white-space:nowrap}.empty{text-align:center;color:var(--muted);padding:24px}
-    .modal{display:none;position:fixed;inset:0;z-index:10;background:rgba(15,23,42,.62);padding:20px;align-items:center;justify-content:center}
-    .modal.open{display:flex}.modal-card{width:min(650px,100%);max-height:82vh;background:#fff;border-radius:18px;padding:22px;box-shadow:0 25px 60px rgba(0,0,0,.25)}
-    .modal-card .history{max-height:62vh}.close{font-size:1.4rem;background:#f1f5f9;color:#334155;padding:5px 11px}
-    .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#17202a;color:#fff;padding:11px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;z-index:20}
-    .toast.show{opacity:1;transform:translate(-50%,0)}.toast.error{background:#b91c1c}
-    @media(max-width:720px){body{padding:20px 12px}.grid,.stats{grid-template-columns:1fr}.wallet{padding:17px}header{align-items:start}.status{margin-top:8px}.record{align-items:start;flex-direction:column;gap:3px}.filters,.goal-form{grid-template-columns:1fr}.bar-row{grid-template-columns:65px 1fr 75px}}
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17233c">
+  <meta name="description" content="MoneyCan 是為情侶與家庭設計的共同記帳與存錢筒網站。">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>MoneyCan｜家庭記帳與存錢筒</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <main class="app">
-    <header><div><h1>家庭存錢簿</h1><p class="subtitle">簡單記錄每一筆存入與提領</p></div><span id="status" class="status">連線中</span></header>
-    <aside id="modeBanner" class="mode-banner local" aria-live="polite"><span id="modeIcon" class="mode-icon">⏳</span><div><strong id="modeTitle">正在確認資料模式</strong><p id="modeDescription">請稍候，正在檢查 Firebase 是否可使用。</p></div></aside>
-    <section class="summary" aria-label="總資產"><small>目前總資產（含零錢）</small><strong id="total">$0</strong></section>
-    <section id="wallets" class="grid"></section>
-    <section class="panel">
-      <div class="panel-head"><h2>期間統計</h2><span id="statsMonth" style="color:var(--muted);font-size:.9rem"></span></div>
-      <div class="stats-controls"><select id="statsRange"><option value="week">本週</option><option value="month" selected>本月</option><option value="year">今年</option><option value="all">全部</option><option value="custom">自訂日期</option></select><div id="customDates" class="custom-dates" hidden><input id="statsStart" type="date" aria-label="開始日期"><input id="statsEnd" type="date" aria-label="結束日期"></div></div>
-      <div class="stats"><div class="stat"><small>期間存入</small><strong id="monthDeposit" class="positive">$0</strong></div><div class="stat"><small>期間提領</small><strong id="monthWithdraw" class="negative">$0</strong></div><div class="stat"><small>期間淨增加</small><strong id="monthNet">$0</strong></div></div>
-      <div id="walletBars" class="bars"></div>
-    </section>
-    <section class="panel">
-      <div class="panel-head"><h2>儲蓄目標</h2></div>
-      <div class="goal-form"><input id="goalName" maxlength="30" placeholder="目標名稱，例如：旅遊基金"><input id="goalAmount" type="number" min="1" step="1" placeholder="目標金額"><input id="goalAllocated" type="number" min="0" step="1" placeholder="已分配金額"><select id="goalWallet"><option value="all">總資產</option></select><button id="saveGoal" class="goal-save" type="button">新增目標</button><button id="cancelGoalEdit" class="goal-cancel" type="button" hidden>取消</button></div>
-      <div id="goalsList" class="goals-list"><div class="empty">尚未設定目標</div></div>
-    </section>
-    <section class="panel">
-      <div class="panel-head"><h2>最近紀錄</h2><div class="panel-tools"><button id="undoLast" class="undo-btn" type="button" disabled>撤銷上一筆</button><button id="showAll" class="link-btn" type="button">查看全部</button></div></div>
-      <div class="filters"><input id="searchTransactions" type="search" placeholder="搜尋備註、名稱或分類"><select id="filterWallet"><option value="all">所有錢包</option></select><select id="filterAction"><option value="all">全部類型</option><option value="deposit">存入</option><option value="withdraw">提領</option></select><select id="filterCategory"><option value="all">所有分類</option></select></div>
-      <div id="history" class="history"><div class="empty">正在載入…</div></div>
-      <div class="pagination"><button id="prevPage" type="button">上一頁</button><span id="pageInfo">第 1 頁</span><button id="nextPage" type="button">下一頁</button></div>
-    </section>
-  </main>
-  <div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-card"><div class="panel-head"><h2 id="modalTitle">所有交易紀錄</h2><button id="closeModal" class="close" type="button" aria-label="關閉">×</button></div><div id="modalHistory" class="history"></div></div>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主要導覽">
+      <a class="brand" href="#home" aria-label="MoneyCan 首頁"><span class="brand-mark">M</span><span><strong>MoneyCan</strong><small>一起把生活過好</small></span></a>
+      <nav class="side-nav">
+        <button class="nav-item active" data-route="home"><span>⌂</span>首頁</button>
+        <button class="nav-item" data-route="transactions"><span>≡</span>明細</button>
+        <button class="nav-item" data-route="savings"><span>◎</span>存錢筒</button>
+        <button class="nav-item" data-route="settings"><span>⚙</span>設定</button>
+      </nav>
+      <div class="sidebar-card"><span>家庭帳本</span><strong id="sidebarFamily">我們的生活</strong><small id="syncText">正在連線…</small></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div><p class="eyebrow" id="todayText"></p><h1 id="pageTitle">早安，今天也一起記帳</h1></div>
+        <div class="top-actions"><button id="privacyButton" class="icon-button" type="button" aria-label="隱藏金額" title="隱藏金額">◉</button><button id="quickAddTop" class="primary-button compact" type="button">＋ 記一筆</button></div>
+      </header>
+
+      <section id="homePage" class="page active" data-page="home">
+        <div class="hero-card">
+          <div class="hero-copy"><span class="hero-label">家庭帳戶總資產</span><strong id="totalBalance" class="money private-value">NT$0</strong><div class="hero-meta"><span id="monthNetText">本月結餘 NT$0</span><span id="accountCountText">0 個帳戶</span></div></div>
+          <div class="hero-orb" aria-hidden="true"><div></div><span>MC</span></div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card income"><div class="metric-icon">↙</div><div><span>本月收入</span><strong id="monthIncome" class="private-value">NT$0</strong></div></article>
+          <article class="metric-card expense"><div class="metric-icon">↗</div><div><span>本月支出</span><strong id="monthExpense" class="private-value">NT$0</strong></div></article>
+          <article class="metric-card rate"><div class="metric-icon">%</div><div><span>儲蓄率</span><strong id="savingRate">0%</strong></div></article>
+        </div>
+
+        <div class="content-grid">
+          <section class="card recent-card"><div class="section-head"><div><span class="section-kicker">ACTIVITY</span><h2>最近動態</h2></div><button class="text-button" data-route="transactions">查看全部</button></div><div id="recentTransactions" class="transaction-list"></div></section>
+          <aside class="stack">
+            <section class="card"><div class="section-head"><div><span class="section-kicker">ACCOUNTS</span><h2>我的帳戶</h2></div><button class="icon-button small" id="addAccountButton" type="button" aria-label="新增帳戶">＋</button></div><div id="accountPreview" class="account-list"></div></section>
+            <section class="card savings-preview"><div class="section-head"><div><span class="section-kicker">GOALS</span><h2>存錢進度</h2></div><button class="text-button" data-route="savings">前往</button></div><div id="goalPreview"></div></section>
+            <section class="card settlement-card"><div class="section-head"><div><span class="section-kicker">TOGETHER</span><h2>家庭分攤</h2></div><span id="settlementBadge" class="status-badge">已平衡</span></div><div id="settlementPreview"></div><div id="settlementHistory" class="settlement-history"></div></section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="transactionsPage" class="page" data-page="transactions">
+        <div class="page-heading"><div><span class="section-kicker">TRANSACTIONS</span><h2>所有明細</h2><p>每一筆收入與支出，都清楚留在這裡。</p></div><button class="primary-button" id="addTransactionButton" type="button">＋ 新增記帳</button></div>
+        <section class="card filters-card"><label class="search-field"><span>⌕</span><input id="transactionSearch" type="search" placeholder="搜尋備註或分類"></label><select id="transactionType"><option value="all">全部類型</option><option value="expense">支出</option><option value="income">收入</option></select><select id="transactionAccount"><option value="all">全部帳戶</option></select><input id="transactionMonth" type="month" aria-label="月份"></section>
+        <div class="insight-grid"><article class="insight-card"><span>本月最大分類</span><strong id="topCategory">尚無資料</strong><small id="topCategoryAmount">開始記帳後顯示</small></article><article class="insight-card"><span>平均每日支出</span><strong id="dailyAverage" class="private-value">NT$0</strong><small>依本月目前天數計算</small></article><article class="insight-card"><span>預算狀態</span><strong id="budgetStatus">尚未設定</strong><small id="budgetStatusText">可在設定頁新增預算</small></article></div>
+        <section class="card category-analysis"><div class="section-head"><div><span class="section-kicker">ANALYSIS</span><h2>本月支出去向</h2></div></div><div id="categoryBars" class="category-bars"></div></section>
+        <section class="card"><div id="transactionList" class="transaction-list full"></div></section>
+      </section>
+
+      <section id="savingsPage" class="page" data-page="savings">
+        <div class="page-heading"><div><span class="section-kicker">SAVINGS</span><h2>我們的存錢筒</h2><p>原本的存錢資料都保留在這裡，記帳資料不會混進來。</p></div><button class="primary-button" id="addGoalButton" type="button">＋ 新增目標</button></div>
+        <div class="savings-summary">
+          <article class="savings-total"><span>原存錢筒總額</span><strong id="legacyTotal" class="private-value">NT$0</strong><small>包含原本所有存入與提領</small></article>
+          <div id="legacyWallets" class="legacy-wallet-grid"></div>
+        </div>
+        <section class="card"><div class="section-head"><div><span class="section-kicker">TARGETS</span><h2>儲蓄目標</h2></div></div><div id="goalGrid" class="goal-grid"></div></section>
+        <section class="card"><div class="section-head"><div><span class="section-kicker">HISTORY</span><h2>原本的存錢紀錄</h2></div><span id="legacyCount" class="muted"></span></div><div id="legacyTransactions" class="transaction-list full"></div></section>
+      </section>
+
+      <section id="settingsPage" class="page" data-page="settings">
+        <div class="page-heading"><div><span class="section-kicker">SETTINGS</span><h2>帳本設定</h2><p>依照你們的生活方式調整帳戶與顯示。</p></div></div>
+        <div class="settings-grid">
+          <section class="card"><div class="section-head"><div><h2>記帳帳戶</h2><p class="muted">現金、銀行或電子支付都可以。</p></div><button id="addAccountSettings" class="text-button" type="button">新增</button></div><div id="accountSettingsList" class="settings-list"></div></section>
+          <section class="card"><div class="section-head"><div><h2>家庭成員</h2><p class="muted">共同帳目會依成員計算分攤。</p></div><button id="addMemberButton" class="text-button" type="button">新增</button></div><div id="memberSettingsList" class="settings-list"></div></section>
+          <section class="card"><h2>每月分類預算</h2><p class="muted">接近上限時，分析頁會提醒你們。</p><form id="budgetForm" class="inline-form"><select id="budgetCategory"></select><input id="budgetAmount" type="number" min="1" step="1" placeholder="每月上限" required><button class="primary-button" type="submit">新增</button></form><div id="budgetList" class="settings-list"></div></section>
+          <section class="card"><h2>顯示與隱私</h2><div class="setting-row"><div><strong>隱藏金額</strong><small>在公共場合保護帳務隱私</small></div><button id="privacySwitch" class="switch" type="button" role="switch" aria-checked="false"><span></span></button></div><div class="setting-row"><div><strong>深色模式</strong><small>夜間使用更舒適</small></div><button id="themeSwitch" class="switch" type="button" role="switch" aria-checked="false"><span></span></button></div><div class="setting-row"><div><strong>家庭名稱</strong><small>顯示在帳本側邊欄</small></div><button id="editFamilyButton" class="text-button" type="button">編輯</button></div></section>
+          <section class="card danger-zone"><h2>資料與安裝</h2><p class="muted">備份、搬家或把 MoneyCan 安裝到手機桌面。</p><div class="data-actions"><button id="exportButton" class="secondary-button" type="button">JSON 備份</button><button id="csvButton" class="secondary-button" type="button">CSV 明細</button><button id="importButton" class="secondary-button" type="button">還原備份</button><button id="installButton" class="primary-button" type="button" hidden>安裝到手機</button><input id="importFile" type="file" accept="application/json" hidden></div></section>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="手機導覽"><button class="bottom-item active" data-route="home"><span>⌂</span>首頁</button><button class="bottom-item" data-route="transactions"><span>≡</span>明細</button><button id="mobileAddButton" class="fab" type="button" aria-label="新增記帳">＋</button><button class="bottom-item" data-route="savings"><span>◎</span>存錢筒</button><button class="bottom-item" data-route="settings"><span>⚙</span>設定</button></nav>
   </div>
-  <div id="toast" class="toast" role="status"></div>
-  <script>
-    const firebaseConfig={apiKey:"AIzaSyDADKrFkmuLTYfpH9PGd2xY6j_UJT0CVFg",authDomain:"moneyyy-bea87.firebaseapp.com",projectId:"moneyyy-bea87",storageBucket:"moneyyy-bea87.firebasestorage.app",messagingSenderId:"993162981365",appId:"1:993162981365:web:706344878dce215523fabc",measurementId:"G-TK1JTGWDZR"};
-    const hasFirebase=typeof firebase!=="undefined"&&typeof firebase.firestore==="function";
-    if(hasFirebase)firebase.initializeApp(firebaseConfig);
-    const db=hasFirebase?firebase.firestore():null;
-    const localKey="familyMoneyBookV2";
-    function readLocal(){try{return JSON.parse(localStorage.getItem(localKey))||{}}catch{return {}}}
-    function writeLocal(data){localStorage.setItem(localKey,JSON.stringify(data))}
-    function localTime(){return new Date().toISOString()}
-    const wallets=[
-      {id:"A",docId:"A",label:"伊🍊寶",legacyId:"?踹艇",balance:0},
-      {id:"B",docId:"B",label:"阿帥",legacyId:"隡?窄",balance:0},
-      {id:"Coin",docId:"Coin",label:"零錢包",legacyId:"?園",balance:0}
-    ];
-    const money=new Intl.NumberFormat("zh-TW",{style:"currency",currency:"TWD",maximumFractionDigits:0});
-    const $=id=>document.getElementById(id);
-    const categories=["未分類","見面錢錢","飯飯","車車","粗企玩","其他"];
-    let recent=[],allTransactions=[],goals=[],editingGoalId=null,currentPage=1;const pageSize=20;
 
-    function escapeHtml(value){const node=document.createElement("div");node.textContent=String(value??"");return node.innerHTML}
-    function formatTime(value){if(!value)return "時間未知";const date=value.toDate?value.toDate():new Date(value);return date.toLocaleString("zh-TW",{hour12:false,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
-    function walletLabel(value){const found=wallets.find(w=>[w.id,w.docId,w.legacyId,w.label].includes(value));return found?found.label:(value||"未命名錢包")}
-    function actionLabel(data){if(data.action)return data.action==="deposit"?"存入":"提領";return ["withdraw","提款","提領","??"].includes(data.type)?"提領":"存入"}
-    function notify(message,isError=false){const el=$("toast");el.textContent=message;el.className=`toast show${isError?" error":""}`;clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.className="toast",2600)}
-    function setStatus(text,kind=""){const el=$("status");el.textContent=text;el.className=`status ${kind}`}
-    function setDataMode(mode){const banner=$("modeBanner");if(mode==="cloud"){banner.className="mode-banner cloud";$("modeIcon").textContent="☁️";$("modeTitle").textContent="Firebase 雲端模式";$("modeDescription").textContent="餘額與交易會同步到 Firebase，可在其他裝置使用相同資料。"}else if(mode==="local"){banner.className="mode-banner local";$("modeIcon").textContent="💻";$("modeTitle").textContent="瀏覽器本機模式";$("modeDescription").textContent="Firebase 網址目前無法使用。資料只存在這個瀏覽器，清除瀏覽器資料後將無法復原。"}else{banner.className="mode-banner error";$("modeIcon").textContent="⚠️";$("modeTitle").textContent="資料載入失敗";$("modeDescription").textContent="目前無法確認資料是否已保存，請檢查網路或重新整理頁面。"}}
+  <div id="modalBackdrop" class="modal-backdrop" hidden>
+    <section id="transactionModal" class="sheet" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle" hidden>
+      <div class="sheet-handle"></div><div class="sheet-head"><div><span class="section-kicker">QUICK ENTRY</span><h2 id="transactionModalTitle">新增一筆記帳</h2></div><button class="icon-button" data-close-modal type="button" aria-label="關閉">×</button></div>
+      <form id="transactionForm" class="form-stack">
+        <input id="transactionEditId" type="hidden">
+        <input id="entryScope" type="hidden" value="personal">
+        <div class="segmented"><button class="segment active" data-kind="expense" type="button">支出</button><button class="segment" data-kind="income" type="button">收入</button></div>
+        <label class="amount-field"><span>金額</span><div><small>NT$</small><input id="entryAmount" type="number" min="1" step="1" inputmode="numeric" placeholder="0" required></div></label>
+        <div class="form-grid"><label>付款帳戶<select id="entryAccount" required></select></label><label>分類<select id="entryCategory" required></select></label><label>日期<input id="entryDate" type="date" required></label><label id="payerField">實際付款人<select id="entryPaidBy" required></select></label><label id="splitField">費用負擔<select id="entrySplit"><option value="none">付款人自行負擔</option><option value="equal">成員平均分攤</option><option value="percent">自訂百分比</option><option value="amount">自訂金額</option></select></label><div id="accountOwnerHint" class="account-owner-hint"></div></div>
+        <div id="splitDetails" class="split-details" hidden></div>
+        <label>備註<input id="entryNote" maxlength="80" placeholder="例如：週末一起吃晚餐"></label><label id="recurringField" class="check-row"><input id="entryRecurring" type="checkbox"><span><strong>每月固定記帳</strong><small>之後每月同一天自動建立</small></span></label>
+        <div class="form-actions transaction-form-actions"><button id="deleteTransactionButton" class="danger-button" type="button" hidden>刪除</button><button class="secondary-button" data-close-modal type="button">取消</button><button id="saveTransactionButton" class="primary-button" type="submit">儲存支出</button></div>
+      </form>
+    </section>
 
-    function renderWallets(){
-      $("wallets").innerHTML=wallets.map(w=>`<article class="wallet"><h2>${escapeHtml(w.label)}</h2><div class="balance" id="balance${w.id}">${money.format(w.balance)}</div><label><span style="position:absolute;clip:rect(0 0 0 0)">金額</span><input class="amount" id="input${w.id}" type="number" min="1" step="1" inputmode="numeric" placeholder="輸入金額"></label><div class="quick-amounts" aria-label="快速金額">${[100,200,500,1000].map(value=>`<button class="quick-amount" type="button" data-quick-wallet="${w.id}" data-amount="${value}">+${value}</button>`).join("")}</div><label><span style="position:absolute;clip:rect(0 0 0 0)">備註</span><input class="note" id="note${w.id}" maxlength="50" placeholder="備註（選填）"></label><select class="category" id="category${w.id}" aria-label="交易分類">${categories.map(c=>`<option value="${c}">${c}</option>`).join("")}</select><div class="actions"><button class="deposit" data-wallet="${w.id}" data-action="deposit">＋ 存入</button><button class="withdraw" data-wallet="${w.id}" data-action="withdraw">－ 提領</button></div></article>`).join("");
-      updateDisplay();
-    }
-    function updateDisplay(){wallets.forEach(w=>{const el=$(`balance${w.id}`);if(el)el.textContent=money.format(w.balance)});$("total").textContent=money.format(wallets.reduce((sum,w)=>sum+w.balance,0));renderStats();renderGoal()}
-    function renderHistory(target,items){target.innerHTML=items.length?items.map(t=>{const action=actionLabel(t),editable=t.id&&wallets.some(w=>w.id===t.walletId),cls=action==="存入"?"deposit-text":"withdraw-text",note=t.note?`<small style="display:block;color:var(--muted);margin-top:3px">${escapeHtml(t.note)}</small>`:"",category=`<small style="display:block;color:var(--muted);margin-top:3px">分類：${escapeHtml(t.category||"未分類")}${t.editHistory?.length?` · 已更正 ${t.editHistory.length} 次`:""}</small>`,edit=editable?`<button class="transaction-edit" type="button" data-edit-transaction="${escapeHtml(t.id)}">更正</button>`:"";return `<div class="record"><div><div class="record-main ${cls}">${escapeHtml(walletLabel(t.walletId||t.who))} · ${action} ${money.format(Number(t.amount)||0)}</div>${note}${category}${edit}</div><time>${escapeHtml(formatTime(t.time))}</time></div>`}).join(""):'<div class="empty">還沒有交易紀錄</div>';if(target===$("history"))$("undoLast").disabled=!(recent[0]?.id&&wallets.some(w=>w.id===recent[0].walletId))}
+    <section id="accountModal" class="sheet small-sheet" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle" hidden>
+      <div class="sheet-handle"></div><div class="sheet-head"><h2 id="accountModalTitle">新增帳戶</h2><button class="icon-button" data-close-modal type="button">×</button></div>
+      <form id="accountForm" class="form-stack"><input id="accountEditId" type="hidden"><label>帳戶名稱<input id="accountName" maxlength="24" placeholder="例如：共同生活帳戶" required></label><label>帳戶類型<select id="accountType"><option value="cash">現金</option><option value="bank">銀行帳戶</option><option value="ewallet">電子支付</option><option value="card">信用卡</option></select></label><label>帳戶歸屬<select id="accountOwner"></select></label><label>目前餘額<input id="accountBalance" type="number" step="1" value="0" required></label><div class="form-actions"><button class="secondary-button" data-close-modal type="button">取消</button><button class="primary-button" type="submit">儲存帳戶</button></div></form>
+    </section>
 
-    function transactionDate(t){return t.time?.toDate?t.time.toDate():new Date(t.time||0)}
-    function filteredTransactions(){const query=$("searchTransactions").value.trim().toLowerCase(),walletId=$("filterWallet").value,action=$("filterAction").value,category=$("filterCategory").value,selectedWallet=wallets.find(w=>w.id===walletId);return allTransactions.filter(t=>{const recordLabel=walletLabel(t.walletId||t.who),recordCategory=t.category||"未分類",text=`${recordLabel} ${t.note||""} ${recordCategory}`.toLowerCase(),type=actionLabel(t)==="存入"?"deposit":"withdraw",walletMatches=walletId==="all"||(selectedWallet&&recordLabel===selectedWallet.label);return(!query||text.includes(query))&&walletMatches&&(action==="all"||type===action)&&(category==="all"||recordCategory===category)})}
-    function applyFilters(resetPage=false){if(resetPage)currentPage=1;const items=filteredTransactions(),pages=Math.max(1,Math.ceil(items.length/pageSize));currentPage=Math.min(currentPage,pages);renderHistory($("history"),items.slice((currentPage-1)*pageSize,currentPage*pageSize));$("pageInfo").textContent=`第 ${currentPage} / ${pages} 頁，共 ${items.length} 筆`;$("prevPage").disabled=currentPage<=1;$("nextPage").disabled=currentPage>=pages}
-    function statsPeriod(){const now=new Date(),mode=$("statsRange").value;let start=null,end=new Date(now);end.setHours(23,59,59,999);if(mode==="week"){start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));start.setHours(0,0,0,0)}else if(mode==="month"){start=new Date(now.getFullYear(),now.getMonth(),1)}else if(mode==="year"){start=new Date(now.getFullYear(),0,1)}else if(mode==="custom"){start=$("statsStart").value?new Date(`${$("statsStart").value}T00:00:00`):null;end=$("statsEnd").value?new Date(`${$("statsEnd").value}T23:59:59`):end}return{start,end,mode}}
-    function renderStats(){
-      const period=statsPeriod(),ranged=allTransactions.filter(t=>{const d=transactionDate(t);return(!period.start||d>=period.start)&&d<=period.end});
-      const deposited=ranged.filter(t=>actionLabel(t)==="存入").reduce((s,t)=>s+(Number(t.amount)||0),0),withdrawn=ranged.filter(t=>actionLabel(t)==="提領").reduce((s,t)=>s+(Number(t.amount)||0),0),net=deposited-withdrawn;
-      const labels={week:"本週",month:"本月",year:"今年",all:"全部紀錄",custom:"自訂範圍"};$("statsMonth").textContent=labels[period.mode];$("monthDeposit").textContent=money.format(deposited);$("monthWithdraw").textContent=money.format(withdrawn);$("monthNet").textContent=money.format(net);$("monthNet").className=net>=0?"positive":"negative";
-      const total=wallets.reduce((s,w)=>s+w.balance,0);$("walletBars").innerHTML=wallets.map(w=>{const percent=total>0?w.balance/total*100:0;return `<div class="bar-row"><span>${escapeHtml(w.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,percent)}%"></div></div><strong style="text-align:right">${percent.toFixed(0)}%</strong></div>`}).join("");
-    }
-    function renderGoal(){$("goalsList").innerHTML=goals.length?goals.map(item=>{const source=item.walletId&&item.walletId!=="all"?wallets.find(w=>w.id===item.walletId):null,sourceName=source?source.label:"總資產",allocated=Number(item.allocated)||0,percent=Math.min(100,allocated/item.amount*100);return `<article class="goal-card"><div class="goal-info"><strong>${escapeHtml(item.name)} <small style="color:var(--muted)">· ${escapeHtml(sourceName)}</small></strong><span>${money.format(allocated)} / ${money.format(item.amount)}</span></div><div class="goal-track"><div class="goal-fill" style="width:${percent}%"></div></div><div class="goal-message">${percent>=100?"恭喜，已達成目標！":`已分配 ${percent.toFixed(1)}%，還差 ${money.format(Math.max(0,item.amount-allocated))}。`}</div><div class="goal-actions"><button class="goal-edit" type="button" data-edit-goal="${escapeHtml(item.id)}">編輯</button><button class="goal-delete" type="button" data-delete-goal="${escapeHtml(item.id)}">刪除</button></div></article>`}).join(""):'<div class="empty">尚未設定目標，請在上方新增。</div>'}
+    <section id="settlementModal" class="sheet small-sheet" role="dialog" aria-modal="true" aria-labelledby="settlementModalTitle" hidden>
+      <div class="sheet-handle"></div><div class="sheet-head"><div><span class="section-kicker">SETTLEMENT</span><h2 id="settlementModalTitle">標記分攤已付款</h2></div><button class="icon-button" data-close-modal type="button">×</button></div>
+      <form id="settlementForm" class="form-stack"><input id="settlementFrom" type="hidden"><input id="settlementTo" type="hidden"><p id="settlementDirection" class="settlement-direction"></p><label>實付金額<input id="settlementAmount" type="number" min="1" step="1" inputmode="numeric" required></label><label>從哪個帳戶付出<select id="settlementFromAccount"></select></label><label>存入哪個收款帳戶<select id="settlementToAccount"></select></label><p class="form-note">選擇帳戶會同步調整雙方餘額；選擇「不調整」則只結清分攤。這筆不會列入收入或支出。</p><div class="form-actions"><button class="secondary-button" data-close-modal type="button">取消</button><button class="primary-button" type="submit">確認已付款</button></div></form>
+    </section>
 
-    async function loadWallets(){
-      if(!hasFirebase){const data=readLocal();wallets.forEach(w=>{w.docId=w.id;w.balance=Number(data.wallets?.[w.id])||0});updateDisplay();return}
-      const snapshot=await db.collection("wallets").get();
-      const docs=snapshot.docs;
-      const modernIds=new Set(wallets.map(w=>w.id));
-      const legacyDocs=docs.filter(doc=>!modernIds.has(doc.id));
-      const batch=db.batch();
-      let needsMigration=false;
-      wallets.forEach((wallet,index)=>{
-        const modern=docs.find(doc=>doc.id===wallet.id);
-        const migrated=modern&&modern.data().schemaVersion===2;
-        if(migrated&&modern.data().migratedFrom)wallet.legacyId=modern.data().migratedFrom;
-        const exactLegacy=legacyDocs.find(doc=>doc.id===wallet.legacyId),source=exactLegacy||legacyDocs[index]||modern;
-        wallet.docId=wallet.id;
-        wallet.balance=Number((migrated?modern:source)?.data().balance)||0;
-        if(!migrated){needsMigration=true;batch.set(db.collection("wallets").doc(wallet.id),{balance:wallet.balance,label:wallet.label,schemaVersion:2,migratedFrom:source?.id||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})}
-      });
-      if(needsMigration)await batch.commit();
-      updateDisplay();
-    }
-    async function loadHistory(){if(!hasFirebase){allTransactions=readLocal().transactions||[];allTransactions.sort((a,b)=>transactionDate(b)-transactionDate(a))}else{const snap=await db.collection("transactions").orderBy("time","desc").get();allTransactions=snap.docs.map(doc=>({id:doc.id,...doc.data()}))}recent=allTransactions.slice(0,50);applyFilters();renderStats()}
-    async function migrateUncategorized(){
-      if(localStorage.getItem("depositCategoryMigrationDoneV1"))return;const targets=allTransactions.filter(t=>actionLabel(t)==="存入"&&(!t.category||t.category==="未分類"));
-      if(hasFirebase){for(let start=0;start<targets.length;start+=400){const batch=db.batch();targets.slice(start,start+400).forEach(t=>batch.update(db.collection("transactions").doc(t.id),{category:"見面錢錢"}));await batch.commit()}}else{const data=readLocal();(data.transactions||[]).forEach(t=>{if(actionLabel(t)==="存入"&&(!t.category||t.category==="未分類"))t.category="見面錢錢"});writeLocal(data)}
-      targets.forEach(t=>t.category="見面錢錢");localStorage.setItem("depositCategoryMigrationDoneV1","1");recent=allTransactions.slice(0,50);applyFilters()
-    }
-    async function resetPastWithdrawals(){
-      if(localStorage.getItem("withdrawalCategoryResetV1"))return;const targets=allTransactions.filter(t=>actionLabel(t)==="提領"&&t.category==="見面錢錢");
-      if(hasFirebase){for(let start=0;start<targets.length;start+=400){const batch=db.batch();targets.slice(start,start+400).forEach(t=>batch.update(db.collection("transactions").doc(t.id),{category:"未分類"}));await batch.commit()}}else{const data=readLocal();(data.transactions||[]).forEach(t=>{if(actionLabel(t)==="提領"&&t.category==="見面錢錢")t.category="未分類"});writeLocal(data)}
-      targets.forEach(t=>t.category="未分類");localStorage.setItem("withdrawalCategoryResetV1","1");recent=allTransactions.slice(0,50);applyFilters();if(targets.length)notify(`已將 ${targets.length} 筆舊提領改回「未分類」`)
-    }
-    function startRealtime(){if(!hasFirebase)return;db.collection("wallets").onSnapshot(snapshot=>{snapshot.forEach(doc=>{const wallet=wallets.find(w=>w.id===doc.id);if(wallet)wallet.balance=Number(doc.data().balance)||0});updateDisplay();setStatus("雲端即時同步","online")},error=>{console.warn("錢包即時同步中斷",error);setStatus("同步中斷","error")});db.collection("transactions").orderBy("time","desc").onSnapshot(snapshot=>{allTransactions=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));recent=allTransactions.slice(0,50);applyFilters();renderStats()},error=>{console.warn("交易即時同步中斷",error);setStatus("同步中斷","error")})}
-    async function loadGoal(){
-      const local=readLocal();goals=Array.isArray(local.goals)?local.goals:local.goal?.name?[{id:`goal-${Date.now()}`,name:local.goal.name,amount:Number(local.goal.amount)||0,walletId:"all"}]:[];
-      if(hasFirebase){try{const doc=await db.collection("settings").doc("savingsGoals").get();if(doc.exists&&Array.isArray(doc.data().items))goals=doc.data().items}catch(error){console.warn("目標雲端讀取失敗，改用本機資料",error)}}
-      goals=goals.map(item=>{const walletId=item.walletId||"all",source=walletId==="all"?wallets.reduce((s,w)=>s+w.balance,0):(wallets.find(w=>w.id===walletId)?.balance||0);return{...item,walletId,allocated:Number.isFinite(Number(item.allocated))?Number(item.allocated):Math.min(Number(item.amount)||0,source)}});persistGoalsLocal();renderGoal()
-    }
-    function persistGoalsLocal(){const data=readLocal();data.goals=goals;delete data.goal;writeLocal(data)}
-    function resetGoalForm(){editingGoalId=null;$("goalName").value="";$("goalAmount").value="";$("goalAllocated").value="";$("goalWallet").value="all";$("saveGoal").textContent="新增目標";$("cancelGoalEdit").hidden=true}
-    async function saveGoal(){
-      const name=$("goalName").value.trim(),amount=Number($("goalAmount").value),allocated=Number($("goalAllocated").value||0),walletId=$("goalWallet").value;
-      if(!name||!Number.isSafeInteger(amount)||amount<=0||!Number.isSafeInteger(allocated)||allocated<0)return notify("請輸入有效的目標與已分配金額",true);if(allocated>amount)return notify("已分配金額不可超過目標金額",true);
-      const button=$("saveGoal");button.disabled=true;
-      if(editingGoalId){const item=goals.find(g=>g.id===editingGoalId);if(item)Object.assign(item,{name,amount,allocated,walletId})}else goals.push({id:`goal-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name,amount,allocated,walletId});
-      persistGoalsLocal();renderGoal();resetGoalForm();
-      if(hasFirebase){try{await db.collection("settings").doc("savingsGoals").set({items:goals,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});notify("目標已儲存並同步")}catch(error){console.warn("目標雲端同步失敗，已保存在本機",error);notify("目標已保存在本機（Firebase 權限未開放）")}}else notify("目標已保存在本機");
-      button.disabled=false
-    }
-    function editGoal(id){const item=goals.find(g=>g.id===id);if(!item)return;editingGoalId=id;$("goalName").value=item.name;$("goalAmount").value=item.amount;$("goalAllocated").value=Number(item.allocated)||0;$("goalWallet").value=item.walletId||"all";$("saveGoal").textContent="儲存修改";$("cancelGoalEdit").hidden=false;$("goalName").focus()}
-    async function deleteGoal(id){
-      const item=goals.find(g=>g.id===id);if(!item||!confirm(`確定刪除儲蓄目標「${item.name}」嗎？`))return;
-      goals=goals.filter(g=>g.id!==id);if(editingGoalId===id)resetGoalForm();persistGoalsLocal();renderGoal();
-      if(hasFirebase){try{await db.collection("settings").doc("savingsGoals").set({items:goals,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});notify("目標已刪除並同步")}catch(error){console.warn("刪除結果無法同步，已更新本機",error);notify("目標已從本機刪除（Firebase 權限未開放）")}}else notify("目標已刪除")
-    }
-    async function editTransaction(id){
-      const item=allTransactions.find(t=>t.id===id),wallet=item&&wallets.find(w=>w.id===item.walletId);if(!item||!wallet)return notify("這筆舊版交易無法安全更正",true);
-      const amountText=prompt("更正金額（正整數）",String(item.amount));if(amountText===null)return;const amount=Number(amountText);if(!Number.isSafeInteger(amount)||amount<=0)return notify("請輸入大於 0 的整數金額",true);
-      const note=prompt("更正備註（可以留空）",item.note||"");if(note===null)return;const category=prompt(`更正分類（${categories.join("、")}）`,item.category||"未分類");if(category===null)return;if(!categories.includes(category))return notify("請輸入清單中的分類名稱",true);
-      const action=actionLabel(item),oldSigned=action==="存入"?Number(item.amount):-Number(item.amount),newSigned=action==="存入"?amount:-amount,difference=newSigned-oldSigned,next=wallet.balance+difference;if(next<0)return notify("更正後餘額會小於 0，無法儲存",true);
-      if(!confirm(`確定將這筆${action}更正為 ${money.format(amount)} 嗎？`))return;
-      try{
-        if(hasFirebase){await db.runTransaction(async tx=>{const walletRef=db.collection("wallets").doc(wallet.id),recordRef=db.collection("transactions").doc(item.id),walletDoc=await tx.get(walletRef),stored=Number(walletDoc.data().balance)||0,storedNext=stored+difference;if(storedNext<0)throw new Error("更正後餘額不足");tx.update(walletRef,{balance:storedNext,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});tx.update(recordRef,{amount,note:note.trim(),category,editedAt:firebase.firestore.FieldValue.serverTimestamp(),editHistory:firebase.firestore.FieldValue.arrayUnion({amount:Number(item.amount),note:item.note||"",category:item.category||"未分類",editedAt:new Date().toISOString()})});wallet.balance=storedNext})}else{const data=readLocal(),record=(data.transactions||[]).find(t=>t.id===item.id);if(!record)throw new Error("找不到交易");record.editHistory=record.editHistory||[];record.editHistory.push({amount:Number(record.amount),note:record.note||"",category:record.category||"未分類",editedAt:localTime()});record.amount=amount;record.note=note.trim();record.category=category;record.editedAt=localTime();wallet.balance=next;data.wallets={...(data.wallets||{}),[wallet.id]:next};writeLocal(data)}
-        updateDisplay();await loadHistory();notify("交易與餘額已更正");
-      }catch(error){console.error(error);notify(error.message||"交易更正失敗",true)}
-    }
-    function setupCollapsiblePanels(){document.querySelectorAll("main > .panel").forEach((panel,index)=>{const head=panel.querySelector(":scope > .panel-head");if(!head)return;const body=document.createElement("div");body.className="panel-body";while(head.nextSibling)body.appendChild(head.nextSibling);panel.appendChild(body);const button=document.createElement("button");button.type="button";button.className="collapse-btn";button.textContent="收合";button.addEventListener("click",()=>{panel.classList.toggle("collapsed");button.textContent=panel.classList.contains("collapsed")?"展開":"收合"});head.appendChild(button)})}
+    <section id="goalModal" class="sheet small-sheet" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle" hidden>
+      <div class="sheet-handle"></div><div class="sheet-head"><h2 id="goalModalTitle">新增存錢目標</h2><button class="icon-button" data-close-modal type="button">×</button></div>
+      <form id="goalForm" class="form-stack"><input id="goalEditId" type="hidden"><label>目標名稱<input id="goalName" maxlength="30" placeholder="例如：北海道旅行" required></label><label>目標金額<input id="goalAmount" type="number" min="1" step="1" required></label><label>目前已存<input id="goalSaved" type="number" min="0" step="1" value="0" required></label><label>目標日期<input id="goalDate" type="date"></label><div class="form-actions"><button class="secondary-button" data-close-modal type="button">取消</button><button class="primary-button" type="submit">儲存目標</button></div></form>
+    </section>
+  </div>
 
-    async function updateMoney(walletId,action,button){
-      const wallet=wallets.find(w=>w.id===walletId),input=$(`input${walletId}`),noteInput=$(`note${walletId}`),categoryInput=$(`category${walletId}`),amount=Number(input.value),note=noteInput.value.trim(),category=categoryInput.value;
-      if(!Number.isSafeInteger(amount)||amount<=0){notify("請輸入大於 0 的整數金額",true);input.focus();return}
-      if(action==="withdraw"&&amount>wallet.balance){notify(`${wallet.label} 的餘額不足`,true);return}
-      button.disabled=true;
-      const delta=action==="deposit"?amount:-amount;
-      if(!hasFirebase){
-        const data=readLocal(),next=wallet.balance+delta;
-        wallet.balance=next;data.wallets={...(data.wallets||{}),[wallet.id]:next};data.transactions=data.transactions||[];data.transactions.unshift({id:`local-${Date.now()}`,walletId:wallet.id,who:wallet.label,action,type:action==="deposit"?"存入":"提領",amount,note,category,time:localTime()});writeLocal(data);
-        input.value="";noteInput.value="";categoryInput.value="未分類";updateDisplay();await loadHistory();notify(`${action==="deposit"?"存入":"提領"}成功（本機）`);button.disabled=false;return
-      }
-      const walletRef=db.collection("wallets").doc(wallet.docId),transactionRef=db.collection("transactions").doc();
-      try{
-        await db.runTransaction(async tx=>{
-          const current=await tx.get(walletRef);
-          const stored=current.exists?Number(current.data().balance)||0:wallet.balance;
-          const next=stored+delta;
-          if(next<0)throw new Error("餘額不足");
-          tx.set(walletRef,{balance:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-          tx.set(transactionRef,{walletId:wallet.id,who:wallet.label,action,type:action==="deposit"?"存入":"提領",amount,note,category,time:firebase.firestore.FieldValue.serverTimestamp()});
-          wallet.balance=next;
-        });
-        input.value="";noteInput.value="";categoryInput.value="未分類";updateDisplay();await loadHistory();notify(`${action==="deposit"?"存入":"提領"}成功`);
-      }catch(error){console.error(error);notify(error.message==="餘額不足"?"餘額不足":"儲存失敗，請檢查網路或 Firebase 權限",true)}finally{button.disabled=false}
-    }
-
-    async function undoLastTransaction(){
-      const latest=recent[0];
-      if(!latest?.id||!wallets.some(w=>w.id===latest.walletId))return notify("最新紀錄屬於舊版，請先新增一筆交易後再使用撤銷",true);
-      const wallet=wallets.find(w=>w.id===latest.walletId),action=actionLabel(latest),amount=Number(latest.amount)||0;
-      if(!confirm(`確定撤銷「${wallet.label} ${action} ${money.format(amount)}」嗎？`))return;
-      const button=$("undoLast");button.disabled=true;
-      if(!hasFirebase){const data=readLocal(),next=wallet.balance+(action==="存入"?-amount:amount);if(next<0){button.disabled=false;return notify("目前餘額不足，無法撤銷這筆存入",true)}wallet.balance=next;data.wallets={...(data.wallets||{}),[wallet.id]:next};data.transactions=(data.transactions||[]).filter(t=>t.id!==latest.id);writeLocal(data);updateDisplay();await loadHistory();notify("已撤銷上一筆交易（本機）");return}
-      try{
-        await db.runTransaction(async tx=>{
-          const transactionRef=db.collection("transactions").doc(latest.id),walletRef=db.collection("wallets").doc(wallet.id);
-          const [transactionDoc,walletDoc]=await Promise.all([tx.get(transactionRef),tx.get(walletRef)]);
-          if(!transactionDoc.exists)throw new Error("交易已不存在");
-          const current=Number(walletDoc.data().balance)||0,change=action==="存入"?-amount:amount,next=current+change;
-          if(next<0)throw new Error("目前餘額不足，無法撤銷這筆存入");
-          tx.update(walletRef,{balance:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-          tx.delete(transactionRef);wallet.balance=next;
-        });
-        updateDisplay();await loadHistory();notify("已撤銷上一筆交易");
-      }catch(error){console.error(error);notify(error.message||"撤銷失敗",true)}finally{button.disabled=!(recent[0]?.id&&wallets.some(w=>w.id===recent[0].walletId))}
-    }
-
-    $("wallets").addEventListener("click",event=>{const quick=event.target.closest("button[data-quick-wallet]");if(quick){const input=$(`input${quick.dataset.quickWallet}`);input.value=(Number(input.value)||0)+Number(quick.dataset.amount);input.focus();return}const button=event.target.closest("button[data-wallet]");if(button)updateMoney(button.dataset.wallet,button.dataset.action,button)});
-    $("wallets").addEventListener("keydown",event=>{if(event.key==="Enter"&&event.target.matches(".amount")){const walletId=event.target.id.replace("input","");const button=document.querySelector(`[data-wallet="${walletId}"][data-action="deposit"]`);updateMoney(walletId,"deposit",button)}});
-    $("undoLast").addEventListener("click",undoLastTransaction);$("saveGoal").addEventListener("click",saveGoal);$("cancelGoalEdit").addEventListener("click",resetGoalForm);$("goalsList").addEventListener("click",event=>{const editButton=event.target.closest("[data-edit-goal]"),deleteButton=event.target.closest("[data-delete-goal]");if(editButton)editGoal(editButton.dataset.editGoal);if(deleteButton)deleteGoal(deleteButton.dataset.deleteGoal)});
-    [$("history"),$("modalHistory")].forEach(container=>container.addEventListener("click",event=>{const button=event.target.closest("[data-edit-transaction]");if(button)editTransaction(button.dataset.editTransaction)}));
-    $("statsRange").addEventListener("change",()=>{$("customDates").hidden=$("statsRange").value!=="custom";renderStats()});[$("statsStart"),$("statsEnd")].forEach(input=>input.addEventListener("change",renderStats));
-    ["searchTransactions","filterWallet","filterAction","filterCategory"].forEach(id=>$(id).addEventListener(id==="searchTransactions"?"input":"change",()=>applyFilters(true)));
-    $("prevPage").addEventListener("click",()=>{if(currentPage>1){currentPage--;applyFilters()}});$("nextPage").addEventListener("click",()=>{currentPage++;applyFilters()});
-    $("showAll").addEventListener("click",()=>{const modal=$("historyModal");modal.classList.add("open");renderHistory($("modalHistory"),filteredTransactions())});
-    function closeModal(){$("historyModal").classList.remove("open")}
-    $("closeModal").addEventListener("click",closeModal);$("historyModal").addEventListener("click",e=>{if(e.target===$("historyModal"))closeModal()});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
-
-    async function init(){renderWallets();const walletOptions=wallets.map(w=>`<option value="${w.id}">${escapeHtml(w.label)}</option>`).join("");$("filterWallet").innerHTML+=walletOptions;$("goalWallet").innerHTML+=walletOptions;$("filterCategory").innerHTML+=categories.map(c=>`<option value="${c}">${c}</option>`).join("");setupCollapsiblePanels();try{await loadWallets();await Promise.all([loadHistory(),loadGoal()]);await resetPastWithdrawals();await migrateUncategorized();setStatus(hasFirebase?"雲端已同步":"本機模式",hasFirebase?"online":"");setDataMode(hasFirebase?"cloud":"local");if(hasFirebase)startRealtime();else notify("Firebase 被封鎖，已切換成本機模式")}catch(error){console.error(error);setStatus("連線失敗","error");setDataMode("error");$("history").innerHTML='<div class="empty">無法載入資料。</div>';notify("資料載入失敗",true)}}
-    init();
-  </script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
