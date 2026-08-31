@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isFamilyMember() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/authorizedUsers/$(request.auth.uid));
+    }
+
+    match /authorizedUsers/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /wallets/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /transactions/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /ledgerAccounts/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /ledgerTransactions/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /ledgerSettlements/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /ledgerTransfers/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /settings/{document=**} {
+      allow read, write: if isFamilyMember();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
